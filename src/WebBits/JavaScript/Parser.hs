@@ -88,24 +88,18 @@ parseSwitchStmt =
           clauses <- braces $ many $ parseDefault <|> parseCase
           return (SwitchStmt pos test clauses)
 
-parseWhileStmt:: StatementParser st
-parseWhileStmt = do
-  pos <- getPosition
-  reserved "while"
-  test <- parseParenExpr <?> "parenthesized test-expression in while loop"
-  body <- parseStatement
-  return (WhileStmt pos test body)
+whileStmt :: StatementParser st
+whileStmt = WhileStmt <@> (reserved "while" >> test) <*> parseStatement
+  where
+    test = parseParenExpr <?> "parenthesized test-expression in while loop"
 
-parseDoWhileStmt:: StatementParser st
-parseDoWhileStmt = do
-  pos <- getPosition
-  reserved "do"
-  body <- parseBlockStmt
-  reserved "while" <?> "while at the end of a do block"
-  test <- parseParenExpr <?> "parenthesized test-expression in do loop"
-  optional semi
-  return (DoWhileStmt pos body test)
-
+doWhileStmt :: StatementParser st
+doWhileStmt = DoWhileStmt <@> body <*> (while >> do { e <- test; optional semi; return e })
+  where
+    body = reserved "do" >> parseBlockStmt
+    while = reserved "while" <?> "while at the end of a do block"
+    test = parseParenExpr <?> "parenthesized test-expression in do loop"
+     
 parseContinueStmt:: StatementParser st
 parseContinueStmt = do
   pos <- getPosition
@@ -255,8 +249,8 @@ parseFunctionStmt = do
   return (FunctionStmt pos name args body)
 
 parseStatement:: StatementParser st
-parseStatement = parseIfStmt <|> parseSwitchStmt <|> parseWhileStmt 
-  <|> parseDoWhileStmt <|> parseContinueStmt <|> parseBreakStmt 
+parseStatement = parseIfStmt <|> parseSwitchStmt <|> whileStmt <|> doWhileStmt
+  <|> parseContinueStmt <|> parseBreakStmt 
   <|> parseBlockStmt <|> parseEmptyStmt <|> parseForInStmt <|> parseForStmt
   <|> parseTryStmt <|> parseThrowStmt <|> parseReturnStmt <|> parseWithStmt 
   <|> parseVarDeclStmt  <|> parseFunctionStmt
