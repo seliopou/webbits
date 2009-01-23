@@ -21,13 +21,18 @@ module WebBits.Html.PermissiveParser
   ) where
 
 import Control.Monad
-import Text.ParserCombinators.Parsec hiding (token,tokens)
-import qualified Text.ParserCombinators.Parsec as Parsec
+
 import Data.Char (toLower)
 import Data.List (intersperse)
 
+import Text.Parsec hiding ( token, tokens )
+import Text.Parsec.String ( GenParser )
+import qualified Text.Parsec as Parsec
+
 import qualified WebBits.Html.Syntax as Html
 import WebBits.Html.Syntax (HtmlId,Attribute,Script(..))
+
+type CharParser st = GenParser Char st
 
 type ParsedHtml s = Html.Html SourcePos s
 type ParsedAttribute s = Html.Attribute SourcePos s

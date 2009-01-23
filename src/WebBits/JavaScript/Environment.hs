@@ -6,17 +6,21 @@ module WebBits.JavaScript.Environment
   , Env
   ) where
 
+
+import Control.Monad.State
+
 import Data.Generics hiding (GT)
 import Data.Maybe (fromJust)
 import qualified Data.Set as S
-import WebBits.Data.Zipper (ZipperT,ZipperT)
 import qualified Data.Map as M
-import qualified WebBits.Data.Zipper as Z
-import Control.Monad.State
 import qualified Data.Foldable as F
 import qualified Data.List as L
+
 import WebBits.JavaScript.JavaScript
-import Text.ParserCombinators.Parsec.Pos (SourcePos,initialPos)
+import qualified WebBits.Data.Zipper as Z
+import WebBits.Data.Zipper (ZipperT,ZipperT)
+
+import Text.Parsec.Pos ( SourcePos, initialPos )
 
 ---
 -- Add `this' and `arguments' to the formal parameters of all 

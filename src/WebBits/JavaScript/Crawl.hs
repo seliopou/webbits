@@ -3,13 +3,17 @@ module WebBits.JavaScript.Crawl
   ( getPageJavaScript
   ) where
 
-import WebBits.Common
+
 import Control.Monad
+
 import Data.Char (toLower)
 import Data.Generics
-import System.IO
-import Text.ParserCombinators.Parsec(parse,setPosition,incSourceColumn,Column,sourceLine,sourceColumn)
 
+import System.IO
+
+import Text.Parsec( parse, setPosition, incSourceColumn, Column, sourceLine, sourceColumn )
+
+import WebBits.Common
 import WebBits.Html.Syntax
 import qualified WebBits.JavaScript.JavaScript as Js
 

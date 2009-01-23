@@ -25,7 +25,7 @@ import Data.Generics
 import Test.HUnit
 
 import Text.PrettyPrint.HughesPJ ( render, vcat )
-import Text.ParserCombinators.Parsec (ParseError,sourceName,sourceLine,
+import Text.Parsec (ParseError,sourceName,sourceLine,
   sourceColumn,errorPos,SourcePos)
 import WebBits.Common ( pp )
 import WebBits.JavaScript.PrettyPrint ()

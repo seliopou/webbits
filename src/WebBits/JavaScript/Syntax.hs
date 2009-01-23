@@ -4,7 +4,7 @@ module WebBits.JavaScript.Syntax(Expression(..),CaseClause(..),Statement(..),
          AssignOp(..),Id(..),PrefixOp(..),PostfixOp(..),Prop(..),
          ForInit(..),ForInInit(..)) where
 
-import Text.ParserCombinators.Parsec(SourcePos) -- used by data JavaScript
+import Text.Parsec ( SourcePos )
 import Data.Generics(Data,Typeable)
 
 data JavaScript a

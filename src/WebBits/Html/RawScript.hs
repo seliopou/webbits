@@ -8,7 +8,7 @@ module WebBits.Html.RawScript
 import Data.Generics (Data)
 import Data.Generics (Typeable)
 import Text.PrettyPrint.HughesPJ (text)
-import Text.ParserCombinators.Parsec
+import Text.Parsec
 import WebBits.Common
 import WebBits.Html.Html
 
@@ -32,3 +32,7 @@ parseFromString :: String -> RawHtml
 parseFromString s = case parseHtmlFromString "" s of
   Left e -> error (show e)
   Right (html,_) -> html
+
+parseFromFile p fname = do
+    input <- readFile fname
+    return (runParser p () fname input)

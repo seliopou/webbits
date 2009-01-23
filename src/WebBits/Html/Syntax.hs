@@ -8,12 +8,17 @@ module WebBits.Html.Syntax (
   , attributeValue,attributeUpdate,attributeSet,isAttributeExpr
   ) where
 
-import Text.ParserCombinators.Parsec(CharParser,SourcePos)
+
 import Data.Generics(Data)
 import Data.Typeable(Typeable)
 
+import Text.Parsec ( SourcePos )
+import Text.Parsec.String ( GenParser )
+
 --------------------------------------------------------------------------------
 -- Types
+
+type CharParser st = GenParser Char st
 
 type HtmlId = String
 type AttributeValue = String
@@ -38,7 +43,7 @@ data Html a sc
 
 -- |A type 't' of the 'Script' class can be parsed using 'Parsec'.  't' is of
 -- kind '* -> *', as the parsed AST should be annotated with souce locations
--- (see 'Text.ParserCombinators.Parsec.SourcePos').
+-- (see 'Text.Parsec.SourcePos').
 --
 -- The big deal here is that we can embed a parser for some scripting language,
 -- (e.g. Javascript) into this HTML parser with ease, while preserving source

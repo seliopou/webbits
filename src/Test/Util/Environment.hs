@@ -14,7 +14,7 @@ import Test.HUnit.Text (runTestTT)
 import qualified Data.Foldable as F
 import Data.Foldable (Foldable)
 import Data.Maybe (catMaybes,listToMaybe)
-import Text.ParserCombinators.Parsec.Pos
+import Text.Parsec.Pos
 
 import WebBits.JavaScript.JavaScript (parseJavaScriptFromFile)
 import WebBits.JavaScript.Environment

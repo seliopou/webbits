@@ -2,7 +2,7 @@ module Test.HtmlTest where
 
 import Test.HUnit.Base
 import Test.HUnit.Text
-import Text.ParserCombinators.Parsec.Pos (initialPos)
+import Text.Parsec.Pos ( initialPos )
 import WebBits.Html.RawScript
 
 assertHtmlEqual :: String -> String -> String -> Assertion

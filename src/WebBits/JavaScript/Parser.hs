@@ -13,16 +13,24 @@ module WebBits.JavaScript.Parser(parseScript,parseExpression
    , parseAssignExpr
    ) where
 
+
+import Control.Monad ( liftM, liftM2 )
+import Control.Monad.Identity
+import Control.Monad.Trans ( MonadIO, liftIO )
+
+import Data.Char ( chr )
+import Data.Char
+import Numeric ( readDec , readOct, readHex )
+
+import Text.Parsec
+import Text.Parsec.String
+import Text.Parsec.Expr
+
 import WebBits.JavaScript.Lexer hiding (identifier)
 import qualified WebBits.JavaScript.Lexer as Lexer
 import WebBits.JavaScript.Syntax
-import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Expr
-import Control.Monad(liftM,liftM2)
-import Control.Monad.Trans (MonadIO,liftIO)
-import Numeric(readDec,readOct,readHex)
-import Data.Char(chr)
-import Data.Char
+
+type CharParser st = GenParser Char st
 
 -- We parameterize the parse tree over source-locations.
 type ParsedStatement = Statement SourcePos
@@ -556,7 +564,7 @@ parsePrefixedExpr = do
       innerExpr <- parsePrefixedExpr
       return (PrefixExpr pos op innerExpr)
 
-exprTable:: [[Operator Char st ParsedExpression]]
+exprTable:: [[Operator String st Identity ParsedExpression]]
 exprTable = 
   [
    [makePrefixExpr "++" PrefixInc,
@@ -610,7 +618,7 @@ makeAssignExpr str constr = Infix parser AssocRight where
     reservedOp str
     return (AssignExpr pos constr)
 
-assignTable:: [[Operator Char st ParsedExpression]]
+assignTable:: [[Operator String st Identity ParsedExpression]]
 assignTable = [
   [makeAssignExpr "=" OpAssign, makeAssignExpr "+=" OpAssignAdd, 
     makeAssignExpr "-=" OpAssignSub, makeAssignExpr "*=" OpAssignMul,

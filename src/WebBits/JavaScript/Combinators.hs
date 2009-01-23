@@ -6,10 +6,13 @@ module WebBits.JavaScript.Combinators
   , statementsAt
   ) where
 
+
 import Data.Generics (Data,Typeable, everything, mkQ)
-import Text.ParserCombinators.Parsec (SourcePos)
 import qualified Data.Foldable as F
 import Data.Foldable (Foldable)
+
+import Text.Parsec ( SourcePos )
+
 import WebBits.JavaScript.Syntax
 import WebBits.JavaScript.Instances ()
 import WebBits.Common () 

@@ -6,21 +6,25 @@ module WebBits.Common
   , sourceName
   ) where
 
+
+import Control.Applicative
+import Control.Monad.State.Strict
+import Control.Monad.Identity
+
 import Data.Map (Map)
 import Data.Maybe (catMaybes)
 import Data.Char (toLower)
-import Control.Applicative
-import qualified System.IO as IO
-import Control.Monad.State.Strict
-import Control.Monad.Identity
 import qualified Data.List as L
 import Data.Generics hiding (GT)
 import qualified Data.Foldable as Foldable
 import Data.Foldable (Foldable)
 import qualified Data.Traversable as Traversable
 import Data.Traversable (Traversable, traverse)
+
+import qualified System.IO as IO
+
 import qualified Text.PrettyPrint.HughesPJ as Pp
-import Text.ParserCombinators.Parsec.Pos (SourcePos, initialPos, sourceName)
+import Text.Parsec.Pos ( SourcePos, initialPos, sourceName )
 
 lowercase = map toLower
 
@@ -43,7 +47,7 @@ instance PrettyPrintable a => PrettyPrintable (Maybe a) where
 -- generics.
 instance Typeable SourcePos where
   typeOf _  = 
-    mkTyConApp (mkTyCon "Text.ParserCombinators.Parsec.Pos.SourcePos") []
+    mkTyConApp (mkTyCon "Text.Parsec.Pos.SourcePos") []
     
 -- Complete guesswork.  It seems to work.
 sourcePosDatatype = mkDataType "SourcePos" [sourcePosConstr1]
