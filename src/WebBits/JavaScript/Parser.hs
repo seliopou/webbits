@@ -454,19 +454,21 @@ parseNumLit = do
 -- Position Helper
 ------------------------------------------------------------------------------
 
-withPos cstr = cstr <$> getPosition
+(<@>) :: Monad m => (SourcePos -> a -> b) -> ParsecT s u m a -> ParsecT s u m b
+(<@>) c p = c <$> getPosition <*> p
+infixl 4 <@> 
 
 -------------------------------------------------------------------------------
 -- Compound Expression Parsers
 -------------------------------------------------------------------------------
 
-dotRef e = (reservedOp "." >> withPos cstr <*> identifier) <?> "property.ref"
+dotRef e = (reservedOp "." >> cstr <@> identifier) <?> "property.ref"
     where cstr pos key = DotRef pos e key
 
-funcApp e = (parens $ withPos cstr <*> (parseExpression `sepBy` comma)) <?> "(function application)"
+funcApp e = (parens $ cstr <@> (parseExpression `sepBy` comma)) <?> "(function application)"
     where cstr pos args = CallExpr pos e args
 
-bracketRef e = (brackets $ withPos cstr <*> parseExpression) <?> "[property-ref]"
+bracketRef e = (brackets $ cstr <@> parseExpression) <?> "[property-ref]"
     where cstr pos key = BracketRef pos e key
 
 -------------------------------------------------------------------------------
@@ -474,7 +476,7 @@ bracketRef e = (brackets $ withPos cstr <*> parseExpression) <?> "[property-ref]
 -------------------------------------------------------------------------------
 
 parseParenExpr:: ExpressionParser st
-parseParenExpr = withPos ParenExpr <*> (parens parseListExpr)
+parseParenExpr = ParenExpr <@> (parens parseListExpr)
 
 -- everything above expect functions
 parseExprForNew = parseThisRef <|> parseNullLit <|> parseBoolLit <|> parseStringLit 
