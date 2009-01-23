@@ -13,7 +13,7 @@ module WebBits.JavaScript.Parser(parseScript,parseExpression
    , parseAssignExpr
    ) where
 
-
+import Control.Applicative ( (<$>), (<*>) )
 import Control.Monad ( liftM, liftM2 )
 import Control.Monad.Identity
 import Control.Monad.Trans ( MonadIO, liftIO )
@@ -454,19 +454,19 @@ parseNumLit = do
 -- Position Helper
 ------------------------------------------------------------------------------
 
-withPos cstr p = do { pos <- getPosition; e <- p; return $ cstr pos e }
+withPos cstr = cstr <$> getPosition
 
 -------------------------------------------------------------------------------
 -- Compound Expression Parsers
 -------------------------------------------------------------------------------
 
-dotRef e = (reservedOp "." >> withPos cstr identifier) <?> "property.ref"
+dotRef e = (reservedOp "." >> withPos cstr <*> identifier) <?> "property.ref"
     where cstr pos key = DotRef pos e key
 
-funcApp e = (parens $ withPos cstr (parseExpression `sepBy` comma)) <?> "(function application)"
+funcApp e = (parens $ withPos cstr <*> (parseExpression `sepBy` comma)) <?> "(function application)"
     where cstr pos args = CallExpr pos e args
 
-bracketRef e = (brackets $ withPos cstr parseExpression) <?> "[property-ref]"
+bracketRef e = (brackets $ withPos cstr <*> parseExpression) <?> "[property-ref]"
     where cstr pos key = BracketRef pos e key
 
 -------------------------------------------------------------------------------
@@ -474,7 +474,7 @@ bracketRef e = (brackets $ withPos cstr parseExpression) <?> "[property-ref]"
 -------------------------------------------------------------------------------
 
 parseParenExpr:: ExpressionParser st
-parseParenExpr = withPos ParenExpr (parens parseListExpr)
+parseParenExpr = withPos ParenExpr <*> (parens parseListExpr)
 
 -- everything above expect functions
 parseExprForNew = parseThisRef <|> parseNullLit <|> parseBoolLit <|> parseStringLit 
