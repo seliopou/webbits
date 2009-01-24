@@ -19,8 +19,7 @@ import Control.Monad.Identity
 import Control.Monad.Trans ( MonadIO, liftIO )
 
 import Data.Char ( chr )
-import Data.Char
-import Numeric ( readDec , readOct, readHex )
+import Numeric ( readHex )
 
 import Text.Parsec
 import Text.Parsec.String
