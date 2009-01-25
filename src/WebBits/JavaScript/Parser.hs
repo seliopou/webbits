@@ -40,8 +40,7 @@ type ParsedExpression = Expression SourcePos
 type StatementParser state = CharParser state ParsedStatement
 type ExpressionParser state = CharParser state ParsedExpression
 
-identifier =
-  liftM2 Id getPosition Lexer.identifier
+identifier = Id <@> Lexer.identifier
 
 --{{{ Statements
 
@@ -58,7 +57,7 @@ parseIfStmt:: StatementParser st
 parseIfStmt = do
   pos <- getPosition
   reserved "if"
-  test <- parseParenExpr <?> "parenthesized test-expression in if statement"
+  test <- parenExpr <?> "parenthesized test-expression in if statement"
   consequent <- parseStatement <?> "true-branch of if statement"
   optional semi -- TODO: in spec?
   ((do reserved "else"
@@ -66,38 +65,24 @@ parseIfStmt = do
        return (IfStmt pos test consequent alternate))
     <|> return (IfSingleStmt pos test consequent))
 
-parseSwitchStmt:: StatementParser st
-parseSwitchStmt =
-  let parseDefault = do
-        pos <- getPosition
-        reserved "default"
-        colon
-        statements <- many parseStatement
-        return (CaseDefault pos statements)
-      parseCase = do
-         pos <- getPosition
-         reserved "case"
-         condition <- parseListExpr
-         colon
-         actions <- many parseStatement
-         return (CaseClause pos condition actions)
-    in do pos <- getPosition
-          reserved "switch"
-          test <- parseParenExpr
-          clauses <- braces $ many $ parseDefault <|> parseCase
-          return (SwitchStmt pos test clauses)
+switchStmt :: StatementParser st
+switchStmt = SwitchStmt <@> (reserved "switch" >> parenExpr) <*> (braces clauses)
+  where
+    clauses = many $ defaultp <|> casep
+    defaultp = CaseDefault <@> (reserved "default" >> colon >> many parseStatement)
+    casep = CaseClause <@> (reserved "case" >> parseListExpr) <*> (colon >> many parseStatement)
 
 whileStmt :: StatementParser st
 whileStmt = WhileStmt <@> (reserved "while" >> test) <*> parseStatement
   where
-    test = parseParenExpr <?> "parenthesized test-expression in while loop"
+    test = parenExpr <?> "parenthesized test-expression in while loop"
 
 doWhileStmt :: StatementParser st
 doWhileStmt = DoWhileStmt <@> body <*> (while >> do { e <- test; optional semi; return e })
   where
     body = reserved "do" >> parseBlockStmt
     while = reserved "while" <?> "while at the end of a do block"
-    test = parseParenExpr <?> "parenthesized test-expression in do loop"
+    test = parenExpr <?> "parenthesized test-expression in do loop"
      
 parseContinueStmt:: StatementParser st
 parseContinueStmt = do
@@ -122,35 +107,31 @@ parseBreakStmt = do
   optional semi           
   return (BreakStmt pos id)
 
-parseBlockStmt:: StatementParser st
-parseBlockStmt = do
-  pos <- getPosition
-  statements <- braces (many parseStatement)
-  return (BlockStmt pos statements)
+blockStmt :: StatementParser st
+blockStmt = BlockStmt <@> braces (many parseStatement)
 
-parseEmptyStmt:: StatementParser st 
-parseEmptyStmt = do
+-- NOTE: Keep this around because it's exported.
+parseBlockStmt :: StatementParser st
+parseBlockStmt = blockStmt
+
+emptyStmt :: StatementParser st 
+emptyStmt = do
   pos <- getPosition
   semi
   return (EmptyStmt pos)
 
-parseLabelledStmt:: StatementParser st
-parseLabelledStmt = do
-  pos <- getPosition
-  -- Lookahead for the colon.  If we don't see it, we are parsing an identifier
-  -- for an expression statement.
-  label <- try (do label <- identifier
-                   colon
-                   return label)
-  statement <- parseStatement
-  return (LabelledStmt pos label statement)
 
-parseExpressionStmt:: StatementParser st
-parseExpressionStmt = do
-  pos <- getPosition
-  expr <- parseListExpr -- TODO: spec 12.4?
-  optional semi
-  return (ExprStmt pos expr)
+labelledStmt :: StatementParser st
+labelledStmt = LabelledStmt <@> label <*> parseStatement
+  where
+    label = try $ do { l <- identifier; colon; return l }
+
+-- TODO: spec 12.4?
+expressionStmt :: StatementParser st
+expressionStmt = do
+    exprStmt <- ExprStmt <@> parseListExpr
+    optional semi
+    return exprStmt
 
 
 parseForInStmt:: StatementParser st
@@ -221,7 +202,7 @@ parseWithStmt:: StatementParser st
 parseWithStmt = do
   pos <- getPosition
   reserved "with"
-  context <- parseParenExpr
+  context <- parenExpr
   stmt <- parseStatement
   return (WithStmt pos context stmt)
 
@@ -244,17 +225,17 @@ parseFunctionStmt = do
   pos <- getPosition
   name <- try (reserved "function" >> identifier) -- ambiguity with FuncExpr
   args <- parens (identifier `sepBy` comma)
-  body <- parseBlockStmt <?> "function body in { ... }"
+  body <- blockStmt <?> "function body in { ... }"
   return (FunctionStmt pos name args body)
 
 parseStatement:: StatementParser st
-parseStatement = parseIfStmt <|> parseSwitchStmt <|> whileStmt <|> doWhileStmt
+parseStatement = parseIfStmt <|> switchStmt <|> whileStmt <|> doWhileStmt
   <|> parseContinueStmt <|> parseBreakStmt 
-  <|> parseBlockStmt <|> parseEmptyStmt <|> parseForInStmt <|> parseForStmt
+  <|> blockStmt <|> emptyStmt <|> parseForInStmt <|> parseForStmt
   <|> parseTryStmt <|> parseThrowStmt <|> parseReturnStmt <|> parseWithStmt 
   <|> parseVarDeclStmt  <|> parseFunctionStmt
   -- labelled, expression and the error message always go last, in this order
-  <|> parseLabelledStmt <|> parseExpressionStmt <?> "statement"
+  <|> labelledStmt <|> expressionStmt <?> "statement"
 
 --}}}
 
@@ -277,38 +258,32 @@ parseStatement = parseIfStmt <|> parseSwitchStmt <|> whileStmt <|> doWhileStmt
 
 --{{{ Primary expressions
 
-parseThisRef:: ExpressionParser st
-parseThisRef = do
+thisRef :: ExpressionParser st
+thisRef = do
   pos <- getPosition
   reserved "this"
   return (ThisRef pos)
 
-parseNullLit:: ExpressionParser st
-parseNullLit = do
+nullLit :: ExpressionParser st
+nullLit = do
   pos <- getPosition
   reserved "null"
   return (NullLit pos)
 
 
-parseBoolLit:: ExpressionParser st
-parseBoolLit = do
-    pos <- getPosition
-    let parseTrueLit  = reserved "true"  >> return (BoolLit pos True)
-        parseFalseLit = reserved "false" >> return (BoolLit pos False)
-    parseTrueLit <|> parseFalseLit
+boolLit :: ExpressionParser st
+boolLit = BoolLit <@> (trueLit <|> falseLit)
+    where trueLit  = reserved "true"  >> return True
+          falseLit = reserved "false" >> return False
 
-parseVarRef:: ExpressionParser st
-parseVarRef = liftM2 VarRef getPosition identifier
+varRef :: ExpressionParser st
+varRef = VarRef <@> identifier
 
-parseArrayLit:: ExpressionParser st
-parseArrayLit = liftM2 ArrayLit getPosition (squares (parseExpression `sepBy` comma))
-  
-parseFuncExpr = do
-  pos <- getPosition
-  reserved "function"
-  args <- parens (identifier `sepBy` comma)
-  body <- parseBlockStmt
-  return $ FuncExpr pos args body
+arrayLit :: ExpressionParser st
+arrayLit = ArrayLit <@> (squares (parseExpression `sepBy` comma))
+
+funcExpr = FuncExpr <@> (reserved "function" >> args) <*> blockStmt
+    where args = parens (identifier `sepBy` comma)
 
 --{{{ parsing strings
 
@@ -359,7 +334,7 @@ parseStringLit = do
   pos <- getPosition
   -- parseStringLit' takes as an argument the quote-character that opened the
   -- string.
-  str <- lexeme $ (char '\'' >>= parseStringLit') <|> (char '\"' >>= parseStringLit')
+  str <- lexeme $ ((char '\'' <|> char '\"') >>= parseStringLit')
   -- CRUCIAL: Parsec.Token parsers expect to find their token on the first
   -- character, and read whitespaces beyond their tokens.  Without 'lexeme'
   -- above, expressions like:
@@ -389,22 +364,18 @@ parseRegexpLit = do
   spaces -- crucial for Parsec.Token parsers
   return $ flags (RegexpLit pos pat)
           
-parseObjectLit:: ExpressionParser st
-parseObjectLit =
-  let parseProp = do
-        -- Parses a string, identifier or integer as the property name.  I
-        -- apologize for the abstruse style, but it really does make the code
-        -- much shorter.
-        name <- (liftM (uncurry PropString) 
-                       (liftM (\(StringLit p s) -> (p,s)) parseStringLit))
-                <|> (liftM2 PropId getPosition identifier)
-                <|> (liftM2 PropNum getPosition decimal)
-        colon
-        val <- parseAssignExpr
-        return (name,val)
-    in do pos <- getPosition
-          props <- braces (parseProp `sepEndBy` comma) <?> "object literal"
-          return $ ObjectLit pos props
+objectLit:: ExpressionParser st
+objectLit = ObjectLit <@> (braces (prop `sepEndBy` comma)) <?> "object literal"
+    where prop = do
+            -- Parses a string, identifier or integer as the property name.  I
+            -- apologize for the abstruse style, but it really does make the
+            -- code much shorter.
+            name <- ((\(StringLit p s) -> PropString p s) <$> parseStringLit)
+                    <|> (PropId <@> identifier)
+                    <|> (PropNum <@> decimal)
+            colon
+            val <- parseAssignExpr
+            return (name, val)
 
 --{{{ Parsing numbers.  From pg. 17-18 of ECMA-262.
 
@@ -468,40 +439,37 @@ bracketRef e = (brackets $ cstr <@> parseExpression) <?> "[property-ref]"
 -- Expression Parsers
 -------------------------------------------------------------------------------
 
-parseParenExpr:: ExpressionParser st
-parseParenExpr = ParenExpr <@> (parens parseListExpr)
+parenExpr:: ExpressionParser st
+parenExpr = ParenExpr <@> (parens parseListExpr)
 
 -- everything above expect functions
-parseExprForNew = parseThisRef <|> parseNullLit <|> parseBoolLit <|> parseStringLit 
-  <|> parseArrayLit <|> parseParenExpr <|> parseNewExpr <|> parseNumLit 
-  <|> parseRegexpLit <|> parseObjectLit <|> parseVarRef
+parseExprForNew = thisRef <|> nullLit <|> boolLit <|> parseStringLit 
+  <|> arrayLit <|> parenExpr <|> newExpr <|> parseNumLit 
+  <|> parseRegexpLit <|> objectLit <|> varRef
 
 -- all the expression parsers defined above
-parseSimpleExpr' = parseThisRef <|> parseNullLit <|> parseBoolLit 
-  <|> parseStringLit <|> parseArrayLit <|> parseParenExpr
-  <|> parseFuncExpr <|> parseNumLit <|> parseRegexpLit <|> parseObjectLit
-  <|> parseVarRef
+parseSimpleExpr' = thisRef <|> nullLit <|> boolLit 
+  <|> parseStringLit <|> arrayLit <|> parenExpr
+  <|> funcExpr <|> parseNumLit <|> parseRegexpLit <|> objectLit
+  <|> varRef
 
-parseNewExpr =
-  (do pos <- getPosition
-      reserved "new"
-      constructor <- parseSimpleExprForNew Nothing -- right-associativity
-      arguments <- (try (parens (parseExpression `sepBy` comma))) <|> (return [])
-      return (NewExpr pos constructor arguments)) <|>
-  parseSimpleExpr'
+newExpr = newExpr' <|> parseSimpleExpr'
+    where newExpr' = NewExpr <@> (reserved "new" >> cstr) <*> args
+          cstr = parseSimpleExprForNew Nothing -- right-associativity
+          args = (try (parens (parseExpression `sepBy` comma))) <|> (return [])
 
 parseSimpleExpr (Just e) = (do
     e' <- dotRef e <|> funcApp e <|> bracketRef e
     parseSimpleExpr $ Just e') <|> (return e)
 parseSimpleExpr Nothing = do
-  e <- parseNewExpr <?> "expression (3)"
+  e <- newExpr <?> "expression (3)"
   parseSimpleExpr (Just e)
 
 parseSimpleExprForNew (Just e) = (do
     e' <- dotRef e <|> bracketRef e
     parseSimpleExprForNew $ Just e') <|> (return e)
 parseSimpleExprForNew Nothing = do
-  e <- parseNewExpr <?> "expression (3)"
+  e <- newExpr <?> "expression (3)"
   parseSimpleExprForNew (Just e)
     
 --}}}
